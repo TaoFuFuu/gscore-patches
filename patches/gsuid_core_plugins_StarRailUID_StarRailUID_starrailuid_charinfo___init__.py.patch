@@ -1,0 +1,25 @@
+﻿--- a/gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/__init__.py
++++ b/gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/__init__.py
+@@ -127,3 +127,20 @@
+             f"{_SOURCE_MAP[source]}\n当前值: {current_source}"
+         )
+     return await bot.send(f"当前全局面板数据源: {current_source}\n{PANEL_SOURCE_HINT}")
++
++
++@sv_get_char_info.on_suffix("面板", block=True)
++async def _panel_by_suffix(bot: Bot, ev: Event):
++    """「流萤面板」等同于「查询流萤」。"""
++    raw = ev.raw_text.strip()
++    if not raw.endswith("面板"):
++        return
++    body = raw[: -len("面板")].strip()
++    for _p in ("*", "sr", "SR", "Sr"):
++        if body.startswith(_p):
++            body = body[len(_p) :].strip()
++            break
++    if not body:
++        return
++    ev.text = body
++    await send_char_info(bot, ev)
+
+

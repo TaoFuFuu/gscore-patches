@@ -1,0 +1,15 @@
+﻿--- a/gsuid_core/utils/database/api.py
++++ b/gsuid_core/utils/database/api.py
+@@ -42,7 +42,9 @@
+     if pattern:
+         uid_data = re.findall(pattern, ev.text)
+ 
+-    user_id = ev.at if ev.at else ev.user_id
++    # at 指向 bot 自身时不能当用户 ID（QQ 官方机器人 @ 自己会填 bot_id）
++    _at = ev.at if ev.at and ev.at not in (ev.bot_id, ev.bot_self_id) else None
++    user_id = _at if _at else ev.user_id
+ 
+     if uid_data:
+         uid = uid_data[0]
+
+

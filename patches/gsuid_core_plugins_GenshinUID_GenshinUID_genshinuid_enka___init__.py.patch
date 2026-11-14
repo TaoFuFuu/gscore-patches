@@ -1,0 +1,25 @@
+﻿--- a/gsuid_core/plugins/GenshinUID/GenshinUID/genshinuid_enka/__init__.py
++++ b/gsuid_core/plugins/GenshinUID/GenshinUID/genshinuid_enka/__init__.py
+@@ -534,3 +534,20 @@
+     im = await draw_all_char_list(str(uid))
+     logger.info(t("log.genshinuid.uid_uid_e7b254", uid=uid))
+     await bot.send(im)
++
++
++@sv_get_enka.on_suffix("面板", block=True)
++async def _panel_by_suffix(bot: Bot, ev: Event):
++    """「胡桃面板」等同于「查询胡桃」。"""
++    raw = ev.raw_text.strip()
++    if not raw.endswith("面板"):
++        return
++    body = raw[: -len("面板")].strip()
++    for _p in ("#", "gs", "GS", "Gs", "gs#"):
++        if body.startswith(_p):
++            body = body[len(_p) :].strip()
++            break
++    if not body:
++        return
++    ev.text = body
++    await send_char_info(bot, ev)
+
+

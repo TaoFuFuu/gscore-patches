@@ -1,0 +1,11 @@
+﻿--- a/gsuid_core/buildin_plugins/core_command/__init__.py
++++ b/gsuid_core/buildin_plugins/core_command/__init__.py
+@@ -5,5 +5,5 @@
+ Plugins(
+     name="core_command",
+     force_prefix=["core", "Core", "CORE"],
+-    allow_empty_prefix=False,
++    allow_empty_prefix=True,
+ )
+
+

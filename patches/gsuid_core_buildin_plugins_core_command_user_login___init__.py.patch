@@ -1,0 +1,13 @@
+﻿--- a/gsuid_core/buildin_plugins/core_command/user_login/__init__.py
++++ b/gsuid_core/buildin_plugins/core_command/user_login/__init__.py
+@@ -23,7 +23,7 @@
+ sv_core_user_config = SV("用户管理", pm=1)
+ sv_core_user_add = SV("用户添加")
+ sv_core_user_qrcode_login = SV("扫码登陆")
+-sv_core_user_addck = SV("添加CK", area="DIRECT")
++sv_core_user_addck = SV("添加CK", area="ALL")
+ sv_data_manger = SV("用户数据管理", pm=0)
+ 
+ 
+
+
