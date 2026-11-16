@@ -117,8 +117,72 @@ async def _panel_by_suffix(bot: Bot, ev: Event):
     await send_char_info(bot, ev)
 ```
 
+**同一个文件还有第二处改动**：`send_char_info` 开头加一段纯 UID 拦截。
+
+**问题**：发 `*查询102059463` 会同时触发两个命令 —— `command` 匹配走 `sr查询信息`（正常），
+`prefix` 匹配走角色面板，把 UID 当角色名。后者必然查不到，还要白打一次 API，
+并吐一条 `本地角色缓存读取失败` 的警告。
+
+**做法**：参数里去掉数字和 `换` / `拿` / `带` 之后什么都不剩，说明用户只给了 UID，
+不是要查角色面板，直接放行交给 `sr查询信息`。
+
+```python
+async def send_char_info(bot: Bot, ev: Event):
+    name = ev.text.strip()
+    if not name:
+        return
+    # 只有 UID、没有角色名时，交给「sr查询信息」处理。
+    # 拿一串数字当角色名去查面板必然查不到，还会多打一次 API。
+    residue = re.sub(r"\d+", "", name)
+    for kw in ("换", "拿", "带"):
+        residue = residue.replace(kw, "")
+    if not residue.strip():
+        return
+```
+
+`*查询流萤`、`*查询流萤换` 有角色名，不受影响。
+
 **ZZZeroUID 不用改**：`zzzerouid_char_detail/__init__.py` 第 45-47 行本来就有
 `on_suffix("面板")`，`%安比面板` 原生支持。
+
+---
+
+### 6. `gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/get_char_img.py`
+
+**需求**：修星铁面板缓存的类型不匹配。
+
+**现象**：日志里反复出现
+
+```
+[sr面板] UID102059463 本地角色缓存读取失败:
+players/102059463/102059463.json, error=Expected `str`, got `int` - at `$.uid`
+```
+
+**原因**：这份缓存是从米游社 API 原样落盘的，`uid` 是 JSON 数字（`"uid": 102059463`，
+没有引号）。而 `MihomoCharacter` 模型里 `uid` 声明成 `str`，msgspec 严格解析直接抛错，
+**整份缓存作废**，每次都重新请求 API。
+
+**做法**：解析前把 `uid` 统一成字符串，两种写法都能吃。
+
+```python
+    try:
+        raw = path.read_bytes()
+        # 米游社返回的 uid 是数字（JSON int），而 MihomoCharacter 里声明成 str。
+        # 直接 decode 会报 Expected `str`, got `int`，整份缓存就作废了。
+        # 解析前先把 uid 统一成字符串，兼容两种写法。
+        try:
+            _d = msgjson.decode(raw)
+            if isinstance(_d, dict) and isinstance(_d.get("uid"), int):
+                _d["uid"] = str(_d["uid"])
+                raw = msgjson.encode(_d)
+        except Exception:
+            pass
+        char_data = msgjson.decode(raw, type=MihomoCharacter)
+        source = msgjson.decode(raw).get("source", "cache")
+```
+
+**顺带说明 JSON 的类型**：JSON 里 `102059463` 和 `"102059463"` 是两种东西，
+前者是数字，后者才是字符串。加不加引号决定的，不是"写在文件里就是字符串"。
 
 ---
 
@@ -147,6 +211,7 @@ cp gsuid_core/buildin_plugins/core_command/__init__.py core_init.py.bak
 cp gsuid_core/buildin_plugins/core_command/user_login/__init__.py user_login.py.bak
 cp gsuid_core/plugins/GenshinUID/GenshinUID/genshinuid_enka/__init__.py gs_enka.py.bak
 cp gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/__init__.py sr_charinfo.py.bak
+cp gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/get_char_img.py sr_char_img.py.bak
 ```
 
 ### 第 2 步：先 dry-run，别直接打
@@ -249,6 +314,8 @@ ps -o pid,lstart -p $(systemctl show gscore -p MainPID --value)
 | 3 `添加CK` area | 群里 @ 机器人发同样的 `绑定设备{...}` | 同上，群里也能回 |
 | 4 GenshinUID 面板 | 发 `#胡桃面板` | 出胡桃面板图，和 `#查询胡桃` 一样 |
 | 5 StarRailUID 面板 | 发 `*流萤面板` | 出流萤面板图，和 `*查询流萤` 一样 |
+| 5b 纯 UID 不误匹配 | 发 `*查询102059463` | **只回一条** UID 信息，不再同时冒出一条面板报错 |
+| 6 缓存 uid 类型 | 发 `*面板流萤` 后看日志 | 不再出现 `Expected str, got int - at $.uid`；第二次查同一个 UID 走缓存 |
 | PicQuality | 对比修改前后的图 | 体积变小，肉眼还能看 |
 
 命令里带 `{...}` 的部分必须是合法 JSON，且不能有换行。`绑定设备` 后面什么都没有是**不会触发**的，

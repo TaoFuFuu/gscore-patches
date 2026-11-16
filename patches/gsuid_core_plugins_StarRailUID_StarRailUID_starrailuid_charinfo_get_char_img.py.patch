@@ -1,0 +1,19 @@
+--- a/gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/get_char_img.py
++++ b/gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/get_char_img.py
+@@ -275,6 +275,16 @@
+ 
+     try:
+         raw = path.read_bytes()
++        # 米游社返回的 uid 是数字（JSON int），而 MihomoCharacter 里声明成 str。
++        # 直接 decode 会报 Expected `str`, got `int`，整份缓存就作废了。
++        # 解析前先把 uid 统一成字符串，兼容两种写法。
++        try:
++            _d = msgjson.decode(raw)
++            if isinstance(_d, dict) and isinstance(_d.get("uid"), int):
++                _d["uid"] = str(_d["uid"])
++                raw = msgjson.encode(_d)
++        except Exception:
++            pass
+         char_data = msgjson.decode(raw, type=MihomoCharacter)
+         source = msgjson.decode(raw).get("source", "cache")
+         if path == char_self_path:

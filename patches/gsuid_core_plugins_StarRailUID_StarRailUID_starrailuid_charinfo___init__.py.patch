@@ -1,6 +1,20 @@
-﻿--- a/gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/__init__.py
+--- a/gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/__init__.py
 +++ b/gsuid_core/plugins/StarRailUID/StarRailUID/starrailuid_charinfo/__init__.py
-@@ -127,3 +127,20 @@
+@@ -38,6 +38,13 @@
+     name = ev.text.strip()
+     if not name:
+         return
++    # 只有 UID、没有角色名时，交给「sr查询信息」处理。
++    # 拿一串数字当角色名去查面板必然查不到，还会多打一次 API。
++    residue = re.sub(r"\d+", "", name)
++    for kw in ("换", "拿", "带"):
++        residue = residue.replace(kw, "")
++    if not residue.strip():
++        return
+ 
+     im = await _get_char_info(bot, ev, ev.text)
+     if isinstance(im, str):
+@@ -127,3 +134,20 @@
              f"{_SOURCE_MAP[source]}\n当前值: {current_source}"
          )
      return await bot.send(f"当前全局面板数据源: {current_source}\n{PANEL_SOURCE_HINT}")
@@ -21,5 +35,3 @@
 +        return
 +    ev.text = body
 +    await send_char_info(bot, ev)
-
-
